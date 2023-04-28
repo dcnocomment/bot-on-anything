@@ -10,11 +10,17 @@ import os
 
 
 robot = werobot.WeRoBot(token=channel_conf(const.WECHAT_MP).get('token'))
+robot.config["APP_ID"] = "wx1ae02c9a66f84e31"
+robot.config['ENCODING_AES_KEY'] = 'xYDYHcLHmPgnnOdxeeUEnHWNKQlvhm9MdQdasFho1af'
 thread_pool = ThreadPoolExecutor(max_workers=8)
 cache = {}
 
 @robot.text
 def hello_world(msg):
+    userid_whitelist = []
+    with open('userid_whitelist.txt', 'r', encoding='utf-8') as f:
+        userid_whitelist = [line.strip() for line in f.readlines()]
+
     with open('sensitive_words.txt', 'r', encoding='utf-8') as f: #加入检测违规词
         sensitive_words = [line.strip() for line in f.readlines()]
         found = False
@@ -27,6 +33,9 @@ def hello_world(msg):
 
         else:
             logger.info('[WX_Public] receive public msg: {}, userId: {}'.format(msg.content, msg.source))
+            if msg.source not in userid_whitelist:
+                return "你不是认证用户，请联系管理员"
+                logger.info('[WX_Public] not whitelist user: {}, userId: {}'.format(msg.content, msg.source))
             key = msg.content + '|' + msg.source
             if cache.get(key):
                 # request time
@@ -85,5 +94,3 @@ class WechatSubsribeAccount(Channel):
                 if value.get('status') == "success":
                     cache.pop(key)
                     return value.get("data")
-                return "还在处理中，请稍后再试"
-        return "目前无等待回复信息，请输入对话"
